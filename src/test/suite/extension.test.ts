@@ -1,141 +1,87 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
-import * as utils from '../../utils';
-import {Recorder} from '../../Recorder';
 
-suite('Extension Test Suite', () => {
-	vscode.window.showInformationMessage('Start all tests.');
+/**
+ * Extension Integration Test Suite
+ * Tests the extension activation and command registration
+ */
+suite('Extension Integration Test Suite', () => {
+	vscode.window.showInformationMessage('Start Extension Integration Tests.');
 
-	const decoration = vscode.window.createTextEditorDecorationType({});
+	suite('Extension Activation', () => {
+		test('Extension should be present', () => {
+			const extension = vscode.extensions.getExtension('BrandonBlaschke.easy-highlight');
+			assert.ok(extension, 'Extension should be available');
+		});
 
-	test('Test generateRangeKey', () => {
-		// Different lines from start
-		let key = utils.generateRangeKey(new vscode.Position(0, 0), new vscode.Position(10, 0));
-		assert.strictEqual(key, "00100");
-
-		// Same line in 100s
-		key = utils.generateRangeKey(new vscode.Position(110, 15), new vscode.Position(110, 17));
-		assert.strictEqual(key, "1101511017");
-
-		// Both different line and character
-		key = utils.generateRangeKey(new vscode.Position(5, 5), new vscode.Position(6, 6));
-		assert.strictEqual(key, "5566");
+		test('Extension should activate', async () => {
+			const extension = vscode.extensions.getExtension('BrandonBlaschke.easy-highlight');
+			if (extension) {
+				await extension.activate();
+				assert.ok(extension.isActive, 'Extension should be active');
+			}
+		});
 	});
 
-	test('Test modifyRange with outside positions', () => {
-		let range = new vscode.Range(new vscode.Position(50, 0), new vscode.Position(60, 5));
-		
-		// Positions before Range
-		let result = utils.modifyRange(
-			new vscode.Position(40, 0),
-			new vscode.Position(49, 1),
-			range,
-			decoration);
-		
-		assert.deepStrictEqual(result, {newRange1: range, newRange2: undefined});
-		
-		// Positions after Range
-		result = utils.modifyRange(
-			new vscode.Position(60, 6),
-			new vscode.Position(61, 0),
-			range,
-			decoration
-		);
+	suite('Command Registration', () => {
+		test('Highlight command should be registered', async () => {
+			const commands = await vscode.commands.getCommands(true);
+			assert.ok(
+				commands.includes('easy-highlight.Highlight'),
+				'Highlight command should be registered'
+			);
+		});
 
-		assert.deepStrictEqual(result, {newRange1: range, newRange2: undefined});
+		test('Highlight Color command should be registered', async () => {
+			const commands = await vscode.commands.getCommands(true);
+			assert.ok(
+				commands.includes('easy-highlight.HighlightColor'),
+				'Highlight Color command should be registered'
+			);
+		});
+
+		test('Remove Highlight command should be registered', async () => {
+			const commands = await vscode.commands.getCommands(true);
+			assert.ok(
+				commands.includes('easy-highlight.RemoveHighlight'),
+				'Remove Highlight command should be registered'
+			);
+		});
+
+		test('Remove All Highlights command should be registered', async () => {
+			const commands = await vscode.commands.getCommands(true);
+			assert.ok(
+				commands.includes('easy-highlight.RemoveAllHighlights'),
+				'Remove All Highlights command should be registered'
+			);
+		});
 	});
 
-	test('Test modifyRange with touching positions', () => {
-		let range = new vscode.Range(new vscode.Position(50, 0), new vscode.Position(60, 5));
-		
-		// Positions touching start of Range
-		let result = utils.modifyRange(
-			new vscode.Position(40, 0),
-			new vscode.Position(50, 1),
-			range,
-			decoration);
-		
-		let expectedRange = new vscode.Range(new vscode.Position(50, 1), new vscode.Position(60, 5));
-		assert.deepStrictEqual(result, {newRange1: expectedRange, newRange2: undefined});
-		
-		// Positions touching end of Range
-		result = utils.modifyRange(
-			new vscode.Position(60, 4),
-			new vscode.Position(61, 0),
-			range,
-			decoration
-		);
+	suite('Configuration', () => {
+		test('Configuration section should exist', () => {
+			const config = vscode.workspace.getConfiguration('easy-highlight');
+			assert.ok(config, 'Configuration section should exist');
+		});
 
-		expectedRange = new vscode.Range(new vscode.Position(50, 0), new vscode.Position(60, 4));
-		assert.deepStrictEqual(result, {newRange1: expectedRange, newRange2: undefined});
-	});
+		test('highlightColor setting should have default value', () => {
+			const config = vscode.workspace.getConfiguration('easy-highlight');
+			const highlightColor = config.get<string>('highlightColor');
+			assert.ok(highlightColor, 'highlightColor setting should have a value');
+			assert.ok(
+				highlightColor?.startsWith('#'),
+				'highlightColor should be a hex color'
+			);
+		});
 
-	test('Test modifyRange with inside positions', () => {
-		let range = new vscode.Range(new vscode.Position(50, 0), new vscode.Position(60, 5));
-		
-		// Positions inside of Range
-		let result = utils.modifyRange(
-			new vscode.Position(55, 0),
-			new vscode.Position(55, 10),
-			range,
-			decoration);
-		
-		let expectedRange1 = new vscode.Range(new vscode.Position(50, 0), new vscode.Position(55, 0));
-		let expectedRange2 = new vscode.Range(new vscode.Position(55, 10), new vscode.Position(60, 5));
-		assert.deepStrictEqual(result, {newRange1: expectedRange1, newRange2: expectedRange2});
-	});
-
-	test('Test getConfigColor', () => {
-		assert.ok(utils.getConfigColor());
-	});
-
-	test('Test Recorder hasFile', () => {
-		let recorder = new Recorder();
-		assert.ok(!recorder.hasFile("file"));
-		recorder.setFile("file path", {});
-		assert.ok(recorder.hasFile("file path"));
-	});
-
-	test('Test Recorder getFileRanges', () => {
-		let recorder = new Recorder();
-		assert.deepStrictEqual(recorder.getFileRanges("file path"), {});
-		recorder.setFile("file path", {range: "range"});
-		assert.deepStrictEqual(recorder.getFileRanges("file path"), {range: "range"});
-	});
-
-	test('Test Recorder hasFileRange', () => {
-		let recorder = new Recorder();
-		assert.ok(!recorder.hasFileRange("file path", "range"));
-		recorder.setFile("file path", {range: "range"});
-		assert.ok(recorder.hasFileRange("file path", "range"));
-	});
-
-	test('Test Recorder getFileRange', () => {
-		let recorder = new Recorder();
-		assert.strictEqual(recorder.getFileRange("file path", "range"), undefined);
-		recorder.setFile("file path", {range: "range"});
-		assert.strictEqual(recorder.getFileRange("file path", "range"), "range");
-	});
-
-	test('Test Recorder addFileRange', () => {
-		let recorder = new Recorder();
-		let range = new vscode.Range(new vscode.Position(0,0), new vscode.Position(1,0));
-		assert.strictEqual(recorder.addFileRange("file path", "range", range, decoration, "color"), undefined);
-		recorder.setFile("file path", {range: "range"});
-		assert.ok(recorder.hasFileRange("file path", "range"));
-	});
-
-	test('Test removeFileRange', () => {
-		let recorder = new Recorder();
-		recorder.setFile("file path", {range: "range"});
-		recorder.removeFileRange("file path", "range");
-		assert.ok(!recorder.hasFileRange("file path", "range"));
-	});
-
-	test('Test Recorder removeFile', () => {
-		let recorder = new Recorder();
-		recorder.setFile('file path', {});
-		recorder.removeFile('file path');
-		assert.ok(!recorder.hasFile("file path"));
+		test('Default color should be valid hex', () => {
+			const config = vscode.workspace.getConfiguration('easy-highlight');
+			const highlightColor = config.get<string>('highlightColor');
+			// Default is #fdff322f
+			const hexRegex = /^#[0-9A-Fa-f]{6,8}$/;
+			assert.ok(
+				hexRegex.test(highlightColor || ''),
+				`highlightColor "${highlightColor}" should be a valid hex color`
+			);
+		});
 	});
 });

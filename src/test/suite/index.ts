@@ -6,7 +6,9 @@ export function run(): Promise<void> {
 	// Create the mocha test
 	const mocha = new Mocha({
 		ui: 'tdd',
-		color: true
+		color: true,
+		timeout: 10000, // 10 second timeout for VS Code extension tests
+		reporter: 'spec'
 	});
 
 	const testsRoot = path.resolve(__dirname, '..');
@@ -17,8 +19,15 @@ export function run(): Promise<void> {
 				return e(err);
 			}
 
+			// Sort files to ensure consistent test order
+			files.sort();
+
 			// Add files to the test suite
 			files.forEach(f => mocha.addFile(path.resolve(testsRoot, f)));
+
+			console.log(`\nFound ${files.length} test file(s):`);
+			files.forEach(f => console.log(`  - ${f}`));
+			console.log('');
 
 			try {
 				// Run the mocha test

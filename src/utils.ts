@@ -249,4 +249,4 @@ export const moveRanges = (changeEvent: vscode.TextDocumentContentChangeEvent, f
             updateHighlight(rangeObj, rangeItems[key].decoration, filePath, key, rangeItems[key].color, recorder);
         }
     }
-}
+};
